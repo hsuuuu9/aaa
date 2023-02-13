@@ -1,0 +1,49 @@
+- hosts: all
+  become: true
+  tasks:
+    - name: apt update
+      apt:
+        update_cache: yes
+
+    - name: Install packages
+      apt:
+        name:
+          - "git"
+          - "python3"
+          - "python3-pip"
+        state: present
+        update_cache: yes
+
+    - name: "Installing pip dependencies"
+      pip:
+        name:
+          - selenium
+
+    - name: Creates directory
+      file:
+        path: /home/vagrant/lib
+        state: directory
+
+    # chrome は特定バージョンを取得する。 https://www.slimjet.com/chrome/google-chrome-old-version.php　
+    # 103.0.5060.53 のバージョン
+
+    # すでにchrome install 済みならスキップする
+    - name: Check if Package is installed
+      shell: google-chrome -version | grep 'Google Chrome'
+      register: is_installed
+      failed_when: no
+      changed_when: no
+
+    - name: Download chrome
+      apt: deb="https://www.slimjet.com/chrome/download-chrome.php?file=files%2F103.0.5060.53%2Fgoogle-chrome-stable_current_amd64.deb"
+      when: is_installed.stdout == ''
+
+    # libファイルの配置先用検討
+    - name: chromedriver
+      unarchive:
+        src: https://chromedriver.storage.googleapis.com/104.0.5112.20/chromedriver_linux64.zip
+        dest: /home/vagrant/lib
+        remote_src: yes
+
+    - name: add display
+      lineinfile: dest=/home/vagrant/.bashrc line="export DISPLAY="${DISPLAY:-:0}""
